@@ -41,6 +41,16 @@ export default function Navbar() {
               Discover
             </Link>
             <Link
+              to="/trending"
+              className={`transition-colors duration-200 ${
+                isActive('/trending')
+                  ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                  : 'text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400'
+              }`}
+            >
+              Trending
+            </Link>
+            <Link
               to="/suggestions"
               className={`transition-colors duration-200 ${
                 isActive('/suggestions')
@@ -95,6 +105,16 @@ export default function Navbar() {
             }`}
           >
             Discover
+          </Link>
+          <Link
+            to="/trending"
+            className={`text-sm transition-colors duration-200 ${
+              isActive('/trending')
+                ? 'text-blue-600 dark:text-blue-400 font-semibold'
+                : 'text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            Trending
           </Link>
           <Link
             to="/suggestions"
