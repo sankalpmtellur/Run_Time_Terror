@@ -6,7 +6,7 @@ export default function About() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            About DiscoverOSS
+            About RepoGenie
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
             Making open source discovery more fair, intelligent, and personalized
@@ -33,7 +33,7 @@ export default function About() {
               Our Solution
             </h2>
             <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6">
-              DiscoverOSS is a discovery engine that goes beyond stars and forks. We help developers find the right open-source
+              RepoGenie is a discovery engine that goes beyond stars and forks. We help developers find the right open-source
               projects by providing:
             </p>
           </div>
@@ -98,7 +98,7 @@ export default function About() {
             Built at Hackathon 2025
           </h2>
           <p className="text-lg opacity-90 max-w-2xl mx-auto">
-            DiscoverOSS was created with a mission to improve the developer experience and make open source
+            RepoGenie was created with a mission to improve the developer experience and make open source
             contribution more accessible to everyone. We believe that great projects shouldn't be hidden,
             and every developer should have the tools to find their perfect match in the open source world.
           </p>

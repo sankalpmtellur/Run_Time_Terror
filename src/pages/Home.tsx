@@ -28,7 +28,7 @@ export default function Home() {
 
             <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
               Finding quality open-source projects on GitHub is hard because popular projects dominate search results.
-              <span className="font-semibold text-gray-900 dark:text-white"> DiscoverOSS</span> helps you find the perfect match for your skills and interests.
+              <span className="font-semibold text-gray-900 dark:text-white"> RepoGenie</span> helps you find the perfect match for your skills and interests.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">

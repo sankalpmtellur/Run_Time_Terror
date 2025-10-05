@@ -1,15 +1,26 @@
 import { useState, useMemo } from 'react';
-import { Search, SlidersHorizontal, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Search, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import { useRepositories } from '../hooks/useRepositories';
 import RepositoryCard from '../components/RepositoryCard';
 
 export default function Discover() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('all');
-  const [selectedDomain, setSelectedDomain] = useState('all');
-  const [selectedDifficulty, setSelectedDifficulty] = useState('all');
-  const [hasGoodFirstIssues, setHasGoodFirstIssues] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const suggestedQueries = [
+    'react components',
+    'machine learning python',
+    'web development',
+    'mobile app development',
+    'data visualization',
+    'API development',
+    'game development',
+    'blockchain projects',
+    'devops tools',
+    'testing frameworks',
+    'UI/UX libraries',
+    'database management'
+  ];
 
   const {
     repositories,
@@ -19,41 +30,14 @@ export default function Discover() {
     currentPage,
     totalPages,
     hasNextPage,
-    searchRepositories,
+    searchWithQuery,
+    getTrendingRepositories,
     loadMore,
     refresh,
   } = useRepositories();
 
-  const languages = [
-    'all', 'javascript', 'typescript', 'python', 'java', 'c#', 'php', 'c++', 'c', 'go', 
-    'rust', 'swift', 'kotlin', 'ruby', 'scala', 'html', 'css', 'shell', 'powershell', 'r', 
-    'dart', 'lua', 'perl', 'haskell', 'clojure', 'elixir', 'erlang', 'ocaml', 'f#', 'vb'
-  ];
-
-  const domains = [
-    'all', 'web', 'mobile', 'desktop', 'backend', 'data', 'devops', 'game', 'blockchain', 
-    'ai', 'ml', 'iot', 'security', 'testing', 'documentation', 'education', 'research'
-  ];
-
-  const difficulties = [
-    { value: 'all', label: 'All Levels' },
-    { value: 'beginner', label: 'Beginner' },
-    { value: 'intermediate', label: 'Intermediate' },
-    { value: 'hardcore', label: 'Hardcore' }
-  ];
-
   const handleSearch = () => {
-    const params = {
-      language: selectedLanguage !== 'all' ? selectedLanguage : undefined,
-      domain: selectedDomain !== 'all' ? selectedDomain : undefined,
-      difficulty: selectedDifficulty !== 'all' ? selectedDifficulty : undefined,
-      has_good_first_issues: hasGoodFirstIssues,
-      sort: 'best-match',
-      order: 'desc',
-      per_page: 20,
-    };
-
-    searchRepositories(params);
+    getTrendingRepositories({ per_page: 20 });
   };
 
   const handleSearchWithQuery = () => {
@@ -61,25 +45,28 @@ export default function Discover() {
       handleSearch();
       return;
     }
-
-    // Use search endpoint for text queries
-    const params = {
-      language: selectedLanguage !== 'all' ? selectedLanguage : undefined,
-      domain: selectedDomain !== 'all' ? selectedDomain : undefined,
-      difficulty: selectedDifficulty !== 'all' ? selectedDifficulty : undefined,
-      has_good_first_issues: hasGoodFirstIssues,
-      sort: 'best-match',
-      order: 'desc',
-      per_page: 20,
-    };
-
-    // This would need to be implemented in the hook for search queries
-    searchRepositories(params);
+    searchWithQuery(searchTerm.trim(), { per_page: 20 });
   };
 
   const handleLoadMore = () => {
     loadMore();
   };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setSearchTerm(suggestion);
+    setShowSuggestions(false);
+    searchWithQuery(suggestion, { per_page: 20 });
+  };
+
+  // 🔥 Sort repositories by difficulty level
+  const sortedRepositories = useMemo(() => {
+    const difficultyRank = { Beginner: 0, Intermediate: 1, Hardcore: 2 };
+    return [...repositories].sort((a, b) => {
+      const aRank = difficultyRank[a.difficulty?.level || 'Intermediate'];
+      const bRank = difficultyRank[b.difficulty?.level || 'Intermediate'];
+      return aRank - bRank;
+    });
+  }, [repositories]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
@@ -89,43 +76,57 @@ export default function Discover() {
             Discover Repositories
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Find the perfect open-source project with our advanced AI-powered filtering
+            Search and discover GitHub repositories with our powerful search and filtering capabilities
           </p>
         </div>
 
-        {/* Search and Filters */}
+        {/* Search Input */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8 border border-gray-200 dark:border-gray-700">
-          <div className="flex flex-col md:flex-row gap-4 mb-4">
+          <div className="flex gap-4 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search repositories or topics..."
+                placeholder="Search repositories, topics, or describe what you're looking for..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSearchWithQuery()}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSuggestions(e.target.value.length === 0);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearchWithQuery()}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors duration-200"
               />
+
+              {/* Suggestions */}
+              {showSuggestions && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10 max-h-64 overflow-y-auto">
+                  <div className="p-3 border-b border-gray-200 dark:border-gray-600">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Suggested searches:</p>
+                  </div>
+                  {suggestedQueries.map((suggestion, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-sm transition-colors duration-150"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
             <button
               onClick={handleSearchWithQuery}
               disabled={loading}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
             >
-              {loading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Search className="w-5 h-5" />
-              )}
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
               <span>Search</span>
             </button>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-6 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2"
-            >
-              <SlidersHorizontal className="w-5 h-5" />
-              <span>{showFilters ? 'Hide Filters' : 'Show Filters'}</span>
-            </button>
+
             <button
               onClick={refresh}
               disabled={loading}
@@ -134,74 +135,6 @@ export default function Discover() {
               <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
-
-          {showFilters && (
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700 animate-fade-in">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Language
-                </label>
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors duration-200"
-                >
-                  {languages.map(lang => (
-                    <option key={lang} value={lang}>
-                      {lang === 'all' ? 'All Languages' : lang.charAt(0).toUpperCase() + lang.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Domain
-                </label>
-                <select
-                  value={selectedDomain}
-                  onChange={(e) => setSelectedDomain(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors duration-200"
-                >
-                  {domains.map(domain => (
-                    <option key={domain} value={domain}>
-                      {domain === 'all' ? 'All Domains' : domain.charAt(0).toUpperCase() + domain.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Difficulty
-                </label>
-                <select
-                  value={selectedDifficulty}
-                  onChange={(e) => setSelectedDifficulty(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white transition-colors duration-200"
-                >
-                  {difficulties.map(diff => (
-                    <option key={diff.value} value={diff.value}>
-                      {diff.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="goodFirstIssues"
-                  checked={hasGoodFirstIssues}
-                  onChange={(e) => setHasGoodFirstIssues(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                />
-                <label htmlFor="goodFirstIssues" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Good First Issues
-                </label>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Results Header */}
@@ -229,15 +162,14 @@ export default function Discover() {
               Please wait while we fetch the latest data
             </p>
           </div>
-        ) : repositories.length > 0 ? (
+        ) : sortedRepositories.length > 0 ? (
           <>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {repositories.map(repository => (
+              {sortedRepositories.map(repository => (
                 <RepositoryCard key={repository.id} repository={repository} />
               ))}
             </div>
 
-            {/* Load More Button */}
             {hasNextPage && (
               <div className="text-center mt-12">
                 <button
@@ -245,13 +177,7 @@ export default function Discover() {
                   disabled={loading}
                   className="px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center space-x-2 mx-auto"
                 >
-                  {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <span>Load More</span>
-                    </>
-                  )}
+                  {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <span>Load More</span>}
                 </button>
               </div>
             )}
@@ -271,7 +197,7 @@ export default function Discover() {
               onClick={handleSearch}
               className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
             >
-              Load Popular Repositories
+              Load Trending Repositories
             </button>
           </div>
         )}

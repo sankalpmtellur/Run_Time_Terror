@@ -15,7 +15,7 @@ export default function Navbar() {
           <Link to="/" className="flex items-center space-x-2 group">
             <Code2 className="w-8 h-8 text-blue-600 dark:text-blue-400 group-hover:rotate-12 transition-transform duration-300" />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 dark:from-blue-400 dark:to-cyan-400 bg-clip-text text-transparent">
-              DiscoverOSS
+              RepoGenie
             </span>
           </Link>
 

@@ -6,6 +6,38 @@ interface RepositoryCardProps {
 }
 
 export default function RepositoryCard({ repository }: RepositoryCardProps) {
+  // Derive fallback difficulty if backend did not provide one
+  const deriveFallbackDifficulty = () => {
+    const stars = repository.stargazers_count || 0;
+    const forks = repository.forks_count || 0;
+    const issues = repository.open_issues_count || 0;
+    const size = (repository as any).size || 0;
+    const engagement = stars + forks;
+    let score = 0;
+    // Size
+    if (size < 1000) score += 20; else if (size < 10000) score += 12; else if (size < 50000) score += 6;
+    // Popularity (lower engagement => easier to contribute)
+    if (engagement < 10) score += 20; else if (engagement < 100) score += 12; else if (engagement < 1000) score += 6;
+    // Issue ratio
+    const issueRatio = issues / Math.max(stars, 1);
+    if (issueRatio < 0.01) score += 15; else if (issueRatio < 0.05) score += 10; else if (issueRatio < 0.1) score += 5;
+    // Language gentle boost
+    const beginnerLangs = ['html', 'css', 'javascript', 'typescript', 'python', 'ruby', 'php'];
+    const lang = (repository.language || '').toLowerCase();
+    if (beginnerLangs.includes(lang)) score += 8;
+    let level: 'Beginner' | 'Intermediate' | 'Hardcore' = 'Intermediate';
+    if (score >= 65) level = 'Beginner'; else if (score < 35) level = 'Hardcore';
+    return {
+      level,
+      score: Math.min(100, Math.max(0, score)),
+      description: 'Estimated difficulty',
+      color: '#9ca3af',
+      factors: [] as Array<{ name: string; weight: number; value: string }>,
+      recommendations: [] as string[],
+    };
+  };
+
+  const safeDifficulty = repository.difficulty || deriveFallbackDifficulty();
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -66,14 +98,15 @@ export default function RepositoryCard({ repository }: RepositoryCardProps) {
           </a>
         </div>
 
-        {/* Difficulty Badge */}
+        {/* Difficulty Badge */
+        }
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(repository.difficulty.level)}`}>
-              {repository.difficulty.level}
+            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(safeDifficulty.level)}`}>
+              {safeDifficulty.level}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {repository.difficulty.score}/100
+              {safeDifficulty.score}/100
             </span>
           </div>
           
@@ -137,13 +170,13 @@ export default function RepositoryCard({ repository }: RepositoryCardProps) {
       </div>
 
       {/* Footer with Recommendations */}
-      {repository.difficulty.recommendations && repository.difficulty.recommendations.length > 0 && (
+      {safeDifficulty.recommendations && safeDifficulty.recommendations.length > 0 && (
         <div className="px-6 py-3 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">
             <strong>Recommendations:</strong>
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-500">
-            {repository.difficulty.recommendations[0]}
+            {safeDifficulty.recommendations[0]}
           </p>
         </div>
       )}

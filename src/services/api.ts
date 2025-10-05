@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 25000, // 25 seconds to fail faster and trigger fallback
   headers: {
     'Content-Type': 'application/json',
   },
@@ -89,37 +89,45 @@ export interface TrendingParams {
   difficulty?: string;
   since?: string;
   per_page?: number;
+  page?: number;
   source?: string;
 }
 
 // API Functions
 export const repositoryAPI = {
-  // Get filtered repositories (main endpoint)
-  getRepositories: async (params: SearchParams = {}): Promise<SearchResponse> => {
-    const response = await api.get('/repos', { params });
-    return response.data;
-  },
-
-  // Search repositories with query
-  searchRepositories: async (query: string, params: SearchParams = {}): Promise<SearchResponse> => {
+  // Search repositories with query (main search endpoint)
+  searchRepositories: async (query: string, params: SearchParams = {}, options: { signal?: AbortSignal } = {}): Promise<SearchResponse> => {
     const response = await api.get('/search', { 
       params: { 
         q: query, 
+        sort: params.sort || 'best-match',
+        order: params.order || 'desc',
+        per_page: params.per_page || 30,
+        page: params.page || 1,
         ...params 
-      } 
+      },
+      signal: options.signal
     });
     return response.data;
   },
 
-  // Get trending repositories
-  getTrendingRepositories: async (params: TrendingParams = {}): Promise<SearchResponse> => {
-    const response = await api.get('/search/trending', { params });
+  // Get repository details
+  getRepositoryDetails: async (owner: string, repo: string, options: { signal?: AbortSignal } = {}): Promise<{ success: boolean; data: Repository }> => {
+    const response = await api.get(`/search/repository/${owner}/${repo}`, { signal: options.signal });
     return response.data;
   },
 
-  // Get repository details
-  getRepositoryDetails: async (owner: string, repo: string): Promise<{ success: boolean; data: Repository }> => {
-    const response = await api.get(`/search/repository/${owner}/${repo}`);
+  // Get trending repositories
+  getTrendingRepositories: async (params: TrendingParams = {}, options: { signal?: AbortSignal } = {}): Promise<SearchResponse> => {
+    const response = await api.get('/search/trending', { 
+      params: {
+        language: params.language,
+        since: params.since || 'daily',
+        per_page: params.per_page || 30,
+        ...params 
+      },
+      signal: options.signal
+    });
     return response.data;
   },
 
@@ -134,7 +142,33 @@ export const repositoryAPI = {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Ignore cancellations (typing, navigation, refresh)
+    if (error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.message === 'canceled') {
+      return Promise.reject(error);
+    }
     console.error('API Error:', error.response?.data || error.message);
+    
+    // Handle timeout errors gracefully
+    if (error.code === 'ECONNABORTED') {
+      const timeoutErr: any = new Error('The request took too long and timed out.');
+      timeoutErr.isTimeout = true;
+      timeoutErr.code = 'ECONNABORTED';
+      throw timeoutErr;
+    }
+    
+    // Handle network errors
+    if (error.message === 'Network Error') {
+      throw new Error('Network error. Please check your connection and try again.');
+    }
+    
+    // Normalize common rate limit message
+    if (error.response?.status === 403 || error.response?.status === 429) {
+      const rateErr: any = new Error('Service is busy right now (rate limit). Please try again shortly.');
+      rateErr.isRateLimit = true;
+      rateErr.status = error.response?.status;
+      throw rateErr;
+    }
+
     throw error;
   }
 );
