@@ -1,8 +1,8 @@
 {
   "version": 2,
   "functions": {
-    "api/*.php": {
-      "runtime": "now-php@1.0.0"
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
     }
   },
   "env": {
