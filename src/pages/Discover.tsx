@@ -117,7 +117,7 @@ export default function Discover() {
                 </div>
               )}
             </div>
-
+ 
             <button
               onClick={handleSearchWithQuery}
               disabled={loading}
